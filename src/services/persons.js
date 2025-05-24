@@ -1,5 +1,5 @@
 import axios from "axios";
-const baseURL = "http://localhost:3001";
+const baseURL = "https://phonebook-fe-7ud0.onrender.com";
 
 const getPersons = () =>
   axios.get(`${baseURL}/persons`).then((response) => response.data);
