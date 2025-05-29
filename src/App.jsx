@@ -7,7 +7,7 @@ import "./App.css";
 import Notification from "./components/Notification";
 
 function App() {
-  const [person, setPerson] = useState([]);
+  const [persons, setPersons] = useState([]);
   const [newName, setNewName] = useState("");
   const [newNumber, setNewNumber] = useState("");
   const [newFilterName, setNewFilterName] = useState("");
@@ -17,7 +17,8 @@ function App() {
     personService
       .getPersons()
       .then((initialPerson) => {
-        setPerson(initialPerson);
+        setPersons(initialPerson);
+        console.log(initialPerson)
       })
       .catch((err) => console.log("Fail to get phonebook data", err));
   }, []);
@@ -43,7 +44,7 @@ function App() {
     }
 
     /** Update a person*/
-    const existingPerson = person.find((p) => p.name === newName);
+    const existingPerson = persons.find((p) => p.name === newName);
     if (existingPerson) {
       const ok = confirm(
         `${newName} is already added to phonebook, replace the old number with a new one?`
@@ -57,8 +58,8 @@ function App() {
         personService
           .updatePerson(existingPerson.id, updatedPerson)
           .then((returnedPerson) => {
-            setPerson(
-              person.map((p) =>
+            setPersons(
+              persons.map((p) =>
                 p.id === existingPerson.id ? returnedPerson : p
               )
             );
@@ -75,14 +76,24 @@ function App() {
             }, 5000);
           })
           .catch((err) => {
-            setErrorMessage({
-              text: `Info of ${existingPerson.name} has already been removed from server`,
-              type: "error",
-            });
-            setPerson(person.filter((p) => p.id !== existingPerson.id));
-            setTimeout(() => {
-              setErrorMessage(null);
-            }, 5000);
+            if (err.response?.status === 404) {
+              setErrorMessage({
+                text: `${existingPerson.name} không còn tồn tại trên server.`,
+                type: "error",
+              });
+
+              // Cập nhật lại danh sách từ server
+              personService.getPersons().then((updatedPersons) => {
+                setPersons(updatedPersons);
+              });
+            } else {
+              setErrorMessage({
+                text: `Lỗi khi cập nhật thông tin: ${err.message}`,
+                type: "error",
+              });
+            }
+
+            setTimeout(() => setErrorMessage(null), 5000);
           });
       }
       return;
@@ -97,7 +108,7 @@ function App() {
     personService
       .createPerson(newPerson)
       .then((returnPerson) => {
-        setPerson([...person, returnPerson]);
+        setPersons([...persons, returnPerson]);
         setNewName("");
         setNewNumber("");
         setErrorMessage({
@@ -119,12 +130,12 @@ function App() {
       });
   };
 
-  const filterPersons = person.filter(
+  const filterPersons = persons.filter(
     (p) => p.name && p.name.toLowerCase().includes(newFilterName.toLowerCase())
   );
 
   const deletePerson = (id) => {
-    const personToDelete = person.find((p) => p.id === id);
+    const personToDelete = persons.find((p) => p.id === id);
     if (!personToDelete) return;
 
     const confirmDelete = confirm(`Delete ${personToDelete.name}?`);
@@ -133,7 +144,7 @@ function App() {
     personService
       .deletePerson(id)
       .then(() => {
-        setPerson(person.filter((p) => p.id !== id));
+        setPersons(persons.filter((p) => p.id !== id));
       })
       .then(() => {
         setErrorMessage({
